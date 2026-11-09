@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Http\Controllers;
+use App\Models\PrioritySetting;
+use App\Services\PriorityCalculator;
+use Illuminate\Http\Request;
+
+class TaskController extends Controller
+{
+ public function index(Request $r, PriorityCalculator $calc){$s=PrioritySetting::firstOrCreate(['user_id'=>$r->user()->id],['urgency_weight'=>0.5,'contribution_weight'=>0.3,'difficulty_weight'=>0.2,'horizon_days'=>14]);$q=$r->user()->tasks()->with('course')->where('status','!=','Selesai');if($r->filled('course_id'))$q->where('course_id',$r->integer('course_id'));if($r->filled('status'))$q->where('status',$r->string('status'));$tasks=$q->get();foreach($tasks as $t){$score=$calc->score($t->deadline?->toDateString(),(float)$t->grade_contribution,$t->difficulty,$s);$category=$calc->category($score);if((float)$t->getRawOriginal('auto_score')!==$score||$t->getRawOriginal('auto_priority')!==$category)$t->forceFill(['auto_score'=>$score,'auto_priority'=>$category])->save();}return view('tasks.index',compact('tasks'));}
+ public function create(Request $r){if(!$r->user()->courses()->exists())return redirect()->route('courses.index')->with('warning','Tambahkan mata kuliah terlebih dahulu sebelum membuat tugas.');$courses=$r->user()->courses()->get();return view('tasks.form',compact('courses'));}
+ public function store(Request $r,PriorityCalculator $calc){if(!$r->user()->courses()->exists())return redirect()->route('courses.index')->with('warning','Tambahkan mata kuliah terlebih dahulu sebelum membuat tugas.');$d=$this->validateTask($r);$r->user()->courses()->findOrFail($d['course_id']);$s=PrioritySetting::firstOrCreate(['user_id'=>$r->user()->id],['urgency_weight'=>0.5,'contribution_weight'=>0.3,'difficulty_weight'=>0.2,'horizon_days'=>14]);$score=$calc->score($d['deadline']??null,(float)$d['grade_contribution'],$d['difficulty'],$s);$r->user()->tasks()->create([...$d,'auto_score'=>$score,'auto_priority'=>$calc->category($score)]);return redirect()->route('tasks.index')->with('success','Tugas ditambahkan.');}
+ public function edit(Request $r,$task){$task=$r->user()->tasks()->findOrFail($task);$courses=$r->user()->courses()->get();return view('tasks.form',compact('task','courses'));}
+ public function update(Request $r,$task,PriorityCalculator $calc){$task=$r->user()->tasks()->findOrFail($task);$d=$this->validateTask($r);$r->user()->courses()->findOrFail($d['course_id']);$s=PrioritySetting::firstOrCreate(['user_id'=>$r->user()->id],['urgency_weight'=>0.5,'contribution_weight'=>0.3,'difficulty_weight'=>0.2,'horizon_days'=>14]);$score=$calc->score($d['deadline']??null,(float)$d['grade_contribution'],$d['difficulty'],$s);$task->update([...$d,'auto_score'=>$score,'auto_priority'=>$calc->category($score)]);return redirect()->route('tasks.index')->with('success','Tugas diperbarui.');}
+ public function destroy(Request $r,$task){$r->user()->tasks()->findOrFail($task)->delete();return back()->with('success','Tugas dihapus.');}
+ public function status(Request $r,$task){$task=$r->user()->tasks()->findOrFail($task);$task->update(['status'=>$r->validate(['status'=>'required|in:Belum dikerjakan,Sedang dikerjakan,Selesai'])['status']]);return back()->with('success','Status diperbarui.');}
+ public function priority(Request $r,$task){$task=$r->user()->tasks()->findOrFail($task);$task->update(['manual_priority'=>$r->validate(['manual_priority'=>'nullable|in:Tinggi,Sedang,Rendah'])['manual_priority']]);return back()->with('success','Prioritas manual diperbarui.');}
+ private function validateTask(Request $r):array{return $r->validate(['title'=>'required|string|max:180','description'=>'nullable|string|max:5000','course_id'=>'required|integer','deadline'=>'nullable|date','grade_contribution'=>'required|numeric|min:0|max:100','difficulty'=>'required|in:Mudah,Sedang,Sulit','status'=>'required|in:Belum dikerjakan,Sedang dikerjakan,Selesai','manual_priority'=>'nullable|in:Tinggi,Sedang,Rendah']);}
+}

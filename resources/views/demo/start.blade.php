@@ -1,0 +1,5 @@
+@extends('layouts.app')
+@section('title','Masuk tanpa akun')
+@section('body')
+<div class="auth"><div class="auth-art"><div class="brand"><div class="logo">⌘</div><div><b>Prioritas</b><small>MODE UJI</small></div></div><h1>Coba dulu.<br>Tanpa daftar.</h1><p style="color:#c6c1bd;line-height:1.8">Jelajahi dashboard dan fitur pengelolaan tugas memakai data contoh.</p></div><div class="auth-form"><div class="auth-box"><span class="eyebrow">AKSES PENGUJI</span><h2>Masuk mode uji</h2><p style="color:var(--muted);line-height:1.7">Coba tugas, mata kuliah, prioritas manual, filter, dan bobot AHP. Perubahan hanya sementara, tidak masuk database, dan hilang saat keluar atau sesi berakhir.</p>@if(session('warning'))<div class="notice" style="background:#fff0e6;color:#9b3d00">{{ session('warning') }}</div>@endif<form method="post" action="{{ route('demo.enter') }}">@csrf<button class="btn" style="width:100%;justify-content:center">Masuk tanpa akun</button></form><p style="text-align:center;margin-top:20px"><a href="{{ route('login') }}" style="color:var(--orange)">Kembali ke login</a></p></div></div></div>
+@endsection
