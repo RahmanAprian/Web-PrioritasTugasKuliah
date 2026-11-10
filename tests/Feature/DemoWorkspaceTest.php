@@ -13,7 +13,15 @@ class DemoWorkspaceTest extends TestCase
     {
         $response = $this->post('/demo/start');
         $response->assertRedirect('/demo');
-        $this->get('/demo')->assertOk()->assertSee('MODE UJI')->assertSee('Tugas Contoh');
+        $this->travelTo(\Carbon\Carbon::parse('2026-11-10 12:00:00'));
+        $this->get('/demo')->assertOk()->assertSee('MODE UJI')->assertSee('A5 Proyek aplikasi')->assertSee('Bobot rekomendasi (AHP)')->assertDontSee('Simpan bobot demo');
+        $this->get('/demo/tasks')->assertOk()->assertSee('A1 Kuis harian')->assertSee('A6 Presentasi');
+        $expected = [.7857,.7619,.7571,.631,.5595,.5119];
+        $this->assertCount(6, session()->get('demo_workspace')['tasks']);
+        $actual = array_map(fn($task) => $task['auto_score'], session()->get('demo_workspace')['tasks']);
+        foreach ($expected as $index => $score) $this->assertSame($score, $actual[$index]);
+        $this->put('/demo/settings/priority', ['urgency_weight'=>.2,'contribution_weight'=>.3,'difficulty_weight'=>.5,'horizon_days'=>14])->assertNotFound();
+        $this->get('/demo/tasks/create')->assertOk()->assertSee('Masukkan persentase')->assertSee('Pilih tingkat kesulitan');
         $this->assertGuest();
         $this->assertDatabaseCount('users', 0);
         $this->assertDatabaseCount('courses', 0);

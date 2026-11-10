@@ -45,4 +45,14 @@ class PriorityCalculator
         if ($score === null) return null;
         return $score >= 0.6667 ? 'Tinggi' : ($score >= 0.3333 ? 'Sedang' : 'Rendah');
     }
+
+    public function normalizedWeights(PrioritySetting $settings): PrioritySetting
+    {
+        $copy = clone $settings;
+        $copy->urgency_weight = .5;
+        $copy->contribution_weight = .3;
+        $copy->difficulty_weight = .2;
+        $copy->horizon_days = 14;
+        return $copy;
+    }
 }

@@ -22,7 +22,7 @@ class DemoController extends Controller
     public function dashboard(Request $request, DemoWorkspace $workspace, PriorityCalculator $calculator)
     {
         $data = $workspace->data($request) ?? abort(419, 'Sesi demo sudah kedaluwarsa.');
-        $settings = new PrioritySetting($data['settings']);
+        $settings = $calculator->normalizedWeights(new PrioritySetting($data['settings']));
         foreach ($data['tasks'] as &$task) {
             $task['auto_score'] = $calculator->score($task['deadline'], (float)$task['grade_contribution'], $task['difficulty'], $settings);
             $task['auto_priority'] = $task['auto_score'] === null ? null : $calculator->category($task['auto_score']);
@@ -79,7 +79,7 @@ class DemoController extends Controller
     {
         $data = $workspace->data($request) ?? abort(419);
         $calculator = app(PriorityCalculator::class);
-        $settings = new PrioritySetting($data['settings']);
+        $settings = $calculator->normalizedWeights(new PrioritySetting($data['settings']));
         $tasks = collect($data['tasks'])->where('status', '!=', 'Selesai')->map(function ($task) use ($calculator, $settings, $data) {
             $task['auto_score'] = $calculator->score($task['deadline'] ?? null, (float)$task['grade_contribution'], $task['difficulty'], $settings);
             $task['auto_priority'] = $task['auto_score'] === null ? null : $calculator->category($task['auto_score']);
@@ -115,7 +115,7 @@ class DemoController extends Controller
         $d = $request->validate(['title'=>'required|string|max:180','description'=>'nullable|string|max:5000','course_id'=>'required|string','deadline'=>'nullable|date','grade_contribution'=>'required|numeric|min:0|max:100','difficulty'=>'required|in:Mudah,Sedang,Sulit','status'=>'required|in:Belum dikerjakan,Sedang dikerjakan,Selesai','manual_priority'=>'nullable|in:Tinggi,Sedang,Rendah']);
         $data = $workspace->data($request) ?? abort(419);
         abort_unless(collect($data['courses'])->contains('id', $d['course_id']), 404);
-        $settings = new PrioritySetting($data['settings']);
+        $settings = $calculator->normalizedWeights(new PrioritySetting($data['settings']));
         $d['auto_score'] = $calculator->score($d['deadline'] ?? null, (float)$d['grade_contribution'], $d['difficulty'], $settings);
         $d['auto_priority'] = $d['auto_score'] === null ? null : $calculator->category($d['auto_score']);
         $d['manual_priority'] = $d['manual_priority'] ?? null;
@@ -164,6 +164,7 @@ class DemoController extends Controller
 
     public function settings(Request $request, DemoWorkspace $workspace)
     {
+        abort(404); // Bobot demo dikunci agar hasil semua responden sebanding.
         $d = $request->validate(['urgency_weight'=>'required|numeric|min:0|max:1','contribution_weight'=>'required|numeric|min:0|max:1','difficulty_weight'=>'required|numeric|min:0|max:1','horizon_days'=>'required|integer|min:1|max:365']);
         if (abs($d['urgency_weight'] + $d['contribution_weight'] + $d['difficulty_weight'] - 1) > .0001) return back()->withErrors(['weights'=>'Jumlah bobot harus 1.']);
         $data = $workspace->data($request) ?? abort(419);
