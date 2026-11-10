@@ -26,6 +26,7 @@ class DemoController extends Controller
         foreach ($data['tasks'] as &$task) {
             $task['auto_score'] = $calculator->score($task['deadline'], (float)$task['grade_contribution'], $task['difficulty'], $settings);
             $task['auto_priority'] = $task['auto_score'] === null ? null : $calculator->category($task['auto_score']);
+            $task['auto_reason'] = $calculator->reason($task['deadline'], (float)$task['grade_contribution'], $task['difficulty'], $settings);
         }
         unset($task);
         $workspace->update($request, $data);
@@ -82,6 +83,7 @@ class DemoController extends Controller
         $tasks = collect($data['tasks'])->where('status', '!=', 'Selesai')->map(function ($task) use ($calculator, $settings, $data) {
             $task['auto_score'] = $calculator->score($task['deadline'] ?? null, (float)$task['grade_contribution'], $task['difficulty'], $settings);
             $task['auto_priority'] = $task['auto_score'] === null ? null : $calculator->category($task['auto_score']);
+            $task['auto_reason'] = $calculator->reason($task['deadline'], (float)$task['grade_contribution'], $task['difficulty'], $settings);
             $task['course_name'] = collect($data['courses'])->firstWhere('id', $task['course_id'])['name'] ?? 'Mata kuliah dihapus';
             return $task;
         });
